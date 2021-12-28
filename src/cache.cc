@@ -27,58 +27,28 @@ void CACHE::handle_fill()
         else
             way = find_victim(fill_cpu, MSHR.entry[mshr_index].instr_id, set, block[set], MSHR.entry[mshr_index].ip, MSHR.entry[mshr_index].full_addr, MSHR.entry[mshr_index].type);
 
-#ifdef LLC_BYPASS
-        if ((cache_type == IS_LLC) && (way == LLC_WAY)) { // this is a bypass that does not fill the LLC
-
-            // update replacement policy
-            if (cache_type == IS_LLC) {
-                llc_update_replacement_state(fill_cpu, set, way, MSHR.entry[mshr_index].full_addr, MSHR.entry[mshr_index].ip, 0, MSHR.entry[mshr_index].type, 0);
-
-            }
-            else
-                update_replacement_state(fill_cpu, set, way, MSHR.entry[mshr_index].full_addr, MSHR.entry[mshr_index].ip, 0, MSHR.entry[mshr_index].type, 0);
-
-            // COLLECT STATS
-            sim_miss[fill_cpu][MSHR.entry[mshr_index].type]++;
-            sim_access[fill_cpu][MSHR.entry[mshr_index].type]++;
-
-            // check fill level
-            if (MSHR.entry[mshr_index].fill_level < fill_level) {
-
-	      if(fill_level == FILL_L2)
-		{
-		  if(MSHR.entry[mshr_index].fill_l1i)
-		    {
-		      upper_level_icache[fill_cpu]->return_data(&MSHR.entry[mshr_index]);
-		    }
-		  if(MSHR.entry[mshr_index].fill_l1d)
-		    {
-		      upper_level_dcache[fill_cpu]->return_data(&MSHR.entry[mshr_index]);
-		    }
-		}
-	      else
-		{
-		  if (MSHR.entry[mshr_index].instruction)
-		    upper_level_icache[fill_cpu]->return_data(&MSHR.entry[mshr_index]);
-		  if (MSHR.entry[mshr_index].is_data)
-                    upper_level_dcache[fill_cpu]->return_data(&MSHR.entry[mshr_index]);
-		}
-            }
-
-	    if(warmup_complete[fill_cpu] && (MSHR.entry[mshr_index].cycle_enqueued != 0))
-	      {
-		uint64_t current_miss_latency = (current_core_cycle[fill_cpu] - MSHR.entry[mshr_index].cycle_enqueued);
-		total_miss_latency += current_miss_latency;
-	      }
-
-            MSHR.remove_queue(&MSHR.entry[mshr_index]);
-            MSHR.num_returned--;
-
-            update_fill_cycle();
-
-            return; // return here, no need to process further in this function
-        }
-#endif
+        if (cache_type == IS_LLC) {
+          if (block[set][way].is_data) {
+            upper_level_dcache[fill_cpu]->upper_level_dcache[fill_cpu]->invalidate_entry(block[set][way].address);
+            upper_level_dcache[fill_cpu]->invalidate_entry(block[set][way].address);
+            invalidate_entry(block[set][way].address);
+          } else {
+            upper_level_icache[fill_cpu]->upper_level_icache[fill_cpu]->invalidate_entry(block[set][way].address);
+            upper_level_icache[fill_cpu]->invalidate_entry(block[set][way].address);
+            invalidate_entry(block[set][way].address);
+          }
+          invalidate_entry(block[set][way].address);
+        } else if (cache_type == IS_L2C) {
+          if (block[set][way].is_data) {
+            upper_level_dcache[fill_cpu]->invalidate_entry(block[set][way].address);
+            invalidate_entry(block[set][way].address);
+          } else if (block[set][way].is_data) {
+            upper_level_icache[fill_cpu]->invalidate_entry(block[set][way].address);
+            invalidate_entry(block[set][way].address);
+          }
+          invalidate_entry(block[set][way].address);
+        } else if (cache_type == IS_L1I || cache_type == IS_L1D)
+            invalidate_entry(block[set][way].address);
 
         uint8_t  do_fill = 1;
 
@@ -1092,6 +1062,7 @@ void CACHE::fill_cache(uint32_t set, uint32_t way, PACKET *packet)
     if (block[set][way].valid == 0)
         block[set][way].valid = 1;
     block[set][way].dirty = 0;
+    block[set][way].is_data = packet->data;
     block[set][way].prefetch = (packet->type == PREFETCH) ? 1 : 0;
     block[set][way].used = 0;
 

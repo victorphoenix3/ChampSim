@@ -413,6 +413,11 @@ void MEMORY_CONTROLLER::process(PACKET_QUEUE *queue)
     }
 }
 
+int MEMORY_CONTROLLER::invalidate_entry(uint64_t inval_addr)
+{
+    return -1;
+}
+
 int MEMORY_CONTROLLER::add_rq(PACKET *packet)
 {
     // simply return read requests with dummy response before the warmup

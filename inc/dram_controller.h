@@ -79,7 +79,8 @@ class MEMORY_CONTROLLER : public MEMORY {
     // functions
     int  add_rq(PACKET *packet),
          add_wq(PACKET *packet),
-         add_pq(PACKET *packet);
+         add_pq(PACKET *packet),
+         invalidate_entry(uint64_t inval_addr);
 
     void return_data(PACKET *packet),
          operate(),

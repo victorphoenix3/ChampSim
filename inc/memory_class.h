@@ -29,6 +29,7 @@ class MEMORY {
     virtual int  add_rq(PACKET *packet) = 0;
     virtual int  add_wq(PACKET *packet) = 0;
     virtual int  add_pq(PACKET *packet) = 0;
+    virtual int invalidate_entry(uint64_t inval_addr) = 0;
     virtual void return_data(PACKET *packet) = 0;
     virtual void operate() = 0;
     virtual void increment_WQ_FULL(uint64_t address) = 0;
